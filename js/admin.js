@@ -1,7 +1,8 @@
 /* Sharon 80 — Mode 3: Admin
  *
  * Password-gated (SHA-256). Live view of Sharon's answers, seed 200 questions,
- * toggle trivia live, write 3 distractors + assign photo per question.
+ * toggle trivia live, write 3 distractors + assign photo per question,
+ * and reset the game (clear all players & scores) for a fresh start.
  */
 
 import {
@@ -71,9 +72,11 @@ async function renderApp() {
     el("div", { class: "row" },
       el("button", { class: "btn btn-secondary", onclick: onSeed }, "Seed 200 questions"),
       el("button", { class: "btn btn-secondary", id: "toggle-live" }, "Toggle trivia live"),
+      el("button", { class: "btn btn-secondary", id: "reset-game", onclick: onResetGame }, "🧹 Start fresh — clear all players & scores"),
       el("button", { class: "btn btn-ghost", onclick: () => { sessionStorage.removeItem(SESSION_KEY); renderGate(); } }, "Lock")
     ),
-    el("p", { id: "seed-msg", class: "hint" }, "")
+    el("p", { id: "seed-msg", class: "hint" }, ""),
+    el("p", { id: "reset-msg", class: "hint" }, "")
   );
   const list = el("div", { class: "admin-list", id: "adm-list" });
   screen.append(header, list);
@@ -94,6 +97,34 @@ async function renderApp() {
     btn.textContent = cfg.live ? "Trivia is LIVE — click to hide" : "Trivia hidden — click to go LIVE";
     btn.onclick = async () => { await update(ref(db, "config"), { live: !cfg.live }); };
   });
+
+  onValue(ref(db, "players"), (snap) => {
+    const n = snap.exists() ? Object.keys(snap.val()).length : 0;
+    const btn = $("#reset-game");
+    if (btn) btn.textContent = `🧹 Start fresh — clear all players & scores (${n} player${n === 1 ? "" : "s"})`;
+  });
+}
+
+async function onResetGame() {
+  const msg = $("#reset-msg");
+  const sure = confirm(
+    "Start everyone from scratch?\n\n" +
+    "This DELETES all players and all their scores.\n" +
+    "The leaderboard goes back to empty.\n\n" +
+    "Sharon's answers, the questions, choices, and photos are NOT touched."
+  );
+  if (!sure) { msg.textContent = "Reset cancelled — nothing changed."; return; }
+  const really = confirm("Last check — wipe the leaderboard for real?");
+  if (!really) { msg.textContent = "Reset cancelled — nothing changed."; return; }
+
+  msg.textContent = "Clearing players and scores…";
+  try {
+    await set(ref(db, "scores"), null);
+    await set(ref(db, "players"), null);
+    msg.textContent = "✅ Fresh start! All players and scores cleared. Questions and answers untouched.";
+  } catch (e) {
+    msg.textContent = "Reset failed: " + e.message;
+  }
 }
 
 async function onSeed() {
