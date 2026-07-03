@@ -1,7 +1,10 @@
-/* Sharon 80 — Mode 2: Family trivia
- *
- * Async, individual play. Multiple choice, no time pressure,
- * live global leaderboard, resumes where the player left off.
+/* Sharon 80 — Mode 2: Family trivia (1950s diner edition)
+ * -------------------------------------------------------------
+ * Async individual play. Multiple choice. No time pressure.
+ * Live global leaderboard (Firebase onValue). Per-correct-answer
+ * fireworks that escalate as scores climb — from firecrackers
+ * all the way to a grand finale at 200.
+ * -------------------------------------------------------------
  */
 
 import {
@@ -9,9 +12,12 @@ import {
 } from "./firebase.js";
 import { loadQuestions } from "./questions.js";
 import { $, el, clear } from "./ui.js";
+import * as fireworks from "./fireworks.js";
 
 const NAME_KEY  = "sharon80.playerName";
 const INDEX_KEY = "sharon80.familyIndex";
+
+const CHOICE_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 const state = {
   user: null,
@@ -20,19 +26,24 @@ const state = {
   questions: [],
   playable: [],
   index: 0,
-  scores: {},
-  answered: {}
+  scores: {},         // leaderboard snapshot (all players)
+  answered: {},       // this player's answers
+  photoPool: []       // fallback rotation if a question has no photo
 };
 
+/* ---------- Boot ---------- */
 async function boot() {
+  // Set up the fireworks canvas as soon as we can
+  const canvasEl = document.getElementById("fireworks-canvas");
+  if (canvasEl) fireworks.init(canvasEl);
+
   state.user = await ensureSignedIn();
   state.playerId = state.user.uid;
 
   const cfgSnap = await get(ref(db, "config"));
   const cfg = cfgSnap.exists() ? cfgSnap.val() : { live: true };
   if (cfg.live === false) {
-    $("#screen").innerHTML = "<div class='card center'><h2>The trivia isn't open yet.</h2><p>Check back later today!</p></div>";
-    return;
+    return renderNotLive();
   }
 
   const all = await loadQuestions();
@@ -43,6 +54,10 @@ async function boot() {
     typeof q.correctIndex === "number"
   );
 
+  // Build a shared photo pool from any question that DOES have a photo,
+  // so questions without one still get a real picture instead of a placeholder.
+  state.photoPool = all.map(q => q.photoUrl).filter(Boolean);
+
   const savedName = localStorage.getItem(NAME_KEY);
   if (!savedName) return renderNamePrompt();
   state.playerName = savedName;
@@ -52,16 +67,33 @@ async function boot() {
   subscribeLeaderboard();
 
   const savedIndex = parseInt(localStorage.getItem(INDEX_KEY) || "0", 10);
-  state.index = Number.isFinite(savedIndex) ? Math.max(0, Math.min(savedIndex, state.playable.length)) : 0;
+  state.index = Number.isFinite(savedIndex)
+    ? Math.max(0, Math.min(savedIndex, state.playable.length))
+    : 0;
 
   render();
+}
+
+/* ---------- Screens ---------- */
+
+function renderNotLive() {
+  const screen = $("#screen");
+  clear(screen);
+  screen.append(
+    el("div", { class: "jukebox-card center" },
+      el("h2", { class: "finale-title" }, "The Grand Opening is Coming!"),
+      el("p", {}, "Dan hasn't flipped the OPEN sign yet."),
+      el("p", {}, "Check back later &mdash; the trivia jukebox will be spinning soon.")
+    )
+  );
+  renderLeaderboard();
 }
 
 function renderNamePrompt() {
   const screen = $("#screen");
   clear(screen);
-  const input = el("input", { class: "field", placeholder: "Your name (e.g. Uncle Bob)", autofocus: true });
-  const go = el("button", { class: "btn btn-primary" }, "Let's play!");
+  const input = el("input", { placeholder: "Your name (e.g. Uncle Bob)", autofocus: true });
+  const go = el("button", { class: "retro-btn retro-btn-primary" }, "LET'S PLAY!");
   go.addEventListener("click", async () => {
     const name = (input.value || "").trim();
     if (!name) { input.focus(); return; }
@@ -73,16 +105,18 @@ function renderNamePrompt() {
     state.index = 0;
     render();
   });
-  screen.append(el("div", { class: "card" },
-    el("h1", {}, "🎉 Sharon's 80th Trivia"),
-    el("p", {}, "How well do you know Sharon? Take your time — the leaderboard runs all day."),
-    el("div", { class: "field" },
-      el("label", {}, "What's your name?"),
-      input
-    ),
-    el("div", { class: "big-spacer" }),
-    go
-  ));
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") go.click(); });
+
+  screen.append(
+    el("div", { class: "name-card" },
+      el("h1", {}, "🎉 Welcome, Sweetheart"),
+      el("p", {}, "Grab a booth. Order a milkshake. See how well you know Sharon."),
+      el("label", { style: { display: "block", fontFamily: "'Special Elite', monospace", fontSize: "16px", marginTop: "10px" } }, "WHAT'S YOUR NAME?"),
+      input,
+      go
+    )
+  );
+  renderLeaderboard();
 }
 
 async function ensurePlayerRecord() {
@@ -96,7 +130,10 @@ async function ensurePlayerRecord() {
       lastSeen:   serverTimestamp()
     });
   } else {
-    await update(playerRef, { name: state.playerName, lastSeen: serverTimestamp() });
+    await update(playerRef, {
+      name: state.playerName,
+      lastSeen: serverTimestamp()
+    });
   }
 }
 
@@ -105,40 +142,60 @@ async function loadMyScores() {
   state.answered = snap.exists() ? snap.val() : {};
 }
 
+/* ---------- Main render ---------- */
+
 function render() {
   if (state.playable.length === 0) {
-    $("#screen").innerHTML =
-      "<div class='card center'><h2>Trivia is loading…</h2><p>Dan is still setting up the questions. Try again in a bit.</p></div>";
-    return renderLeaderboard();
+    return renderNoQuestions();
   }
   if (state.index >= state.playable.length) return renderComplete();
 
   const q = state.playable[state.index];
   const already = state.answered[q.id];
+  const total = state.playable.length;
+  const pct = Math.round((state.index / total) * 100);
+  const myScore = Object.values(state.answered).filter(a => a && a.correct).length;
 
   const screen = $("#screen");
   clear(screen);
 
-  const total = state.playable.length;
-  const pct = Math.round((state.index / total) * 100);
-  const progressLabel = el("p", { class: "progress-label" }, `Question ${state.index + 1} of ${total}`);
-  const progressBar = el("div", { class: "progress" }, el("div", { style: { width: pct + "%" } }));
+  const card = el("div", { class: "jukebox-card" });
 
-  const card = el("div", { class: "card" });
-
-  const photo = el("div", { class: "photo-frame" },
-    q.photoUrl
-      ? el("img", { src: q.photoUrl, alt: "Sharon" })
-      : el("div", { class: "placeholder" }, "📷 Photo of Sharon")
+  // Row 1: retro tag + question counter
+  const meta = el("div", { class: "q-meta" },
+    el("span", { class: "retro-tag" }, q.section || "TRIVIA"),
+    el("span", { class: "q-counter" }, `#${state.index + 1} / ${total}`)
   );
 
-  const secTag = el("div", { class: "tag" }, q.section);
-  const qText = el("h2", { class: "question-text" }, q.text);
+  // Progress bar
+  const progress = el("div", { class: "retro-progress" },
+    el("div", { style: { width: pct + "%" } })
+  );
 
-  const choicesWrap = el("div", { class: "choices" });
+  // Polaroid photo of Sharon (real photoUrl if set; otherwise rotate through the pool; otherwise placeholder)
+  const chosenPhoto = q.photoUrl
+    || (state.photoPool.length > 0 ? state.photoPool[state.index % state.photoPool.length] : null);
+  const polaroid = el("div", { class: "polaroid" },
+    el("div", { class: "photo-inner" },
+      chosenPhoto
+        ? el("img", { src: chosenPhoto, alt: "Sharon" })
+        : el("div", { class: "photo-placeholder-inner" }, "☘", el("div", { class: "photo-placeholder-sub" }, "Sharon photo"))
+    ),
+    el("div", { class: "caption" }, "♥ SHARON ♥")
+  );
+
+  // Question text
+  const qText = el("div", { class: "q-text" }, q.text);
+
+  // Choices
+  const choicesWrap = el("div", { class: "choices-grid" });
   q.choices.forEach((choice, i) => {
-    const btn = el("button", { class: "choice", type: "button" }, choice);
-    btn.addEventListener("click", () => pick(q, i, choicesWrap));
+    const btn = el("button", {
+      class: "retro-choice",
+      type: "button",
+      "data-letter": CHOICE_LETTERS[i] || (i + 1)
+    }, choice);
+    btn.addEventListener("click", () => pick(q, i, choicesWrap, card));
     if (already) {
       btn.disabled = true;
       if (i === q.correctIndex) btn.classList.add("correct");
@@ -147,25 +204,62 @@ function render() {
     choicesWrap.append(btn);
   });
 
-  const nextBtn = el("button", { class: "btn btn-primary" }, "Next →");
-  nextBtn.addEventListener("click", () => { state.index++; persistIndex(); render(); });
+  card.append(meta, progress, polaroid, qText, choicesWrap);
 
-  const backBtn = el("button", { class: "btn btn-ghost" }, "← Back");
+  // Action row (nav)
+  const actions = el("div", { class: "retro-actions" });
+  const backBtn = el("button", { class: "retro-btn retro-btn-ghost" }, "← BACK");
   backBtn.addEventListener("click", () => {
     if (state.index > 0) { state.index--; persistIndex(); render(); }
   });
+  actions.append(backBtn);
 
-  card.append(secTag, qText, photo, choicesWrap);
-  if (already) card.append(el("div", { class: "actions" }, backBtn, nextBtn));
-  else card.append(el("div", { class: "actions" }, backBtn));
+  if (already) {
+    // Show feedback badge for a previously answered question
+    const badge = renderFeedbackBadge(already.correct, myScore);
+    card.append(badge);
 
-  screen.append(progressLabel, progressBar, card);
+    const nextBtn = el("button", { class: "retro-btn retro-btn-primary" }, "NEXT →");
+    nextBtn.addEventListener("click", () => { state.index++; persistIndex(); render(); });
+    actions.append(nextBtn);
+  }
+
+  card.append(actions);
+  screen.append(card);
   renderLeaderboard();
 }
 
-async function pick(q, chosenIndex, choicesWrap) {
+function renderNoQuestions() {
+  const screen = $("#screen");
+  clear(screen);
+  screen.append(
+    el("div", { class: "jukebox-card center" },
+      el("h2", { class: "finale-title" }, "Almost Showtime!"),
+      el("p", {}, "Dan is still writing the trivia choices. Come back in a bit &mdash; the fireworks are loaded and waiting.")
+    )
+  );
+  renderLeaderboard();
+}
+
+function renderFeedbackBadge(correct, score) {
+  if (correct) {
+    const tier = fireworks.tierFor(Math.max(1, score));
+    return el("div", { class: "feedback-badge feedback-correct" },
+      "✨ Correct!",
+      el("span", { class: "tier-name" }, tier.name + " unlocked")
+    );
+  }
+  return el("div", { class: "feedback-badge feedback-wrong" },
+    "So close!",
+    el("span", { class: "tier-name" }, "The correct answer is highlighted")
+  );
+}
+
+/* ---------- Answer flow ---------- */
+
+async function pick(q, chosenIndex, choicesWrap, card) {
   const correct = chosenIndex === q.correctIndex;
-  const btns = choicesWrap.querySelectorAll(".choice");
+  const btns = choicesWrap.querySelectorAll(".retro-choice");
   btns.forEach((btn, i) => {
     btn.disabled = true;
     if (i === q.correctIndex) btn.classList.add("correct");
@@ -179,38 +273,69 @@ async function pick(q, chosenIndex, choicesWrap) {
   });
   state.answered[q.id] = { chosenIndex, correct };
 
-  await recomputeTotal();
+  const newScore = Object.values(state.answered).filter(a => a && a.correct).length;
+  await recomputeTotal(newScore);
 
-  const existing = choicesWrap.parentElement.querySelector(".actions");
-  if (!existing) {
-    const nextBtn = el("button", { class: "btn btn-primary" }, "Next →");
+  // Feedback badge + fireworks
+  const oldBadge = card.querySelector(".feedback-badge");
+  if (oldBadge) oldBadge.remove();
+  const badge = renderFeedbackBadge(correct, newScore);
+  card.insertBefore(badge, card.querySelector(".retro-actions") || null);
+
+  if (correct) {
+    const tier = fireworks.celebrate(newScore);
+    // Announce tier for accessibility
+    badge.setAttribute("aria-label", `Correct. ${tier.name} celebration unlocked.`);
+  }
+
+  // Add / update Next button
+  const actions = card.querySelector(".retro-actions");
+  if (actions && !actions.querySelector(".retro-btn-primary")) {
+    const nextBtn = el("button", { class: "retro-btn retro-btn-primary" }, "NEXT →");
     nextBtn.addEventListener("click", () => { state.index++; persistIndex(); render(); });
-    choicesWrap.parentElement.append(el("div", { class: "actions" }, nextBtn));
+    actions.append(nextBtn);
   }
 }
 
-async function recomputeTotal() {
-  const total = Object.values(state.answered).filter(a => a.correct).length;
+async function recomputeTotal(newScore) {
   await update(ref(db, "players/" + state.playerId), {
-    totalScore: total,
+    totalScore: newScore,
     lastSeen: serverTimestamp()
   });
 }
 
 function persistIndex() { localStorage.setItem(INDEX_KEY, String(state.index)); }
 
+/* ---------- Completion ---------- */
+
 function renderComplete() {
-  const total = Object.values(state.answered).filter(a => a.correct).length;
+  const totalCorrect = Object.values(state.answered).filter(a => a && a.correct).length;
+  const totalPlayed = state.playable.length;
   const screen = $("#screen");
   clear(screen);
-  screen.append(el("div", { class: "card center" },
-    el("h1", {}, "🎂 You did it!"),
-    el("p", {}, `You got ${total} of ${state.playable.length} right.`),
-    el("p", {}, "Happy 80th, Sharon 💛"),
-    el("button", { class: "btn btn-secondary", onclick: () => { state.index = 0; persistIndex(); render(); } }, "Play again")
-  ));
+
+  // Grand finale on completion
+  setTimeout(() => fireworks.celebrate(Math.max(200, totalCorrect)), 300);
+
+  screen.append(
+    el("div", { class: "jukebox-card finale-card" },
+      el("div", { class: "finale-title" }, "You Did It!"),
+      el("p", { class: "finale-sub" }, `${totalCorrect} out of ${totalPlayed} correct`),
+      el("p", {}, "Happy 80th, Sharon ❤️"),
+      el("div", { class: "retro-actions", style: { justifyContent: "center", marginTop: "20px" } },
+        el("button", { class: "retro-btn retro-btn-secondary", onclick: () => {
+          state.index = 0; persistIndex(); render();
+        }}, "PLAY AGAIN"),
+        el("button", { class: "retro-btn retro-btn-primary", onclick: () => {
+          fireworks.celebrate(200);
+        }}, "MORE FIREWORKS!")
+      )
+    )
+  );
   renderLeaderboard();
 }
+
+/* ---------- Leaderboard (LIVE) ---------- */
 
 function subscribeLeaderboard() {
   onValue(ref(db, "players"), (snap) => {
@@ -223,30 +348,40 @@ function renderLeaderboard() {
   const wrap = $("#leaderboard");
   if (!wrap) return;
   clear(wrap);
+
   const players = Object.entries(state.scores)
     .map(([id, p]) => ({ id, ...p }))
     .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
-    .slice(0, 20);
+    .slice(0, 25);
 
-  wrap.append(el("h3", {}, "🏆 Leaderboard"));
   if (players.length === 0) {
-    wrap.append(el("p", {}, "No scores yet — be the first!"));
+    wrap.append(
+      el("div", { class: "scoreboard-empty" },
+        "No scores yet.", el("br"), "Be the first on the board!"
+      )
+    );
     return;
   }
-  const ol = el("ol");
-  players.forEach((p) => {
-    const line = el("li", {},
-      el("strong", {}, `${p.name || "Anonymous"}`),
-      ` — ${p.totalScore || 0}`
+
+  players.forEach((p, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank <= 3 ? `rank rank-${rank}` : "rank";
+    const isYou = p.id === state.playerId;
+    const row = el("div", { class: "scoreboard-row" + (isYou ? " you" : "") },
+      el("span", { class: rankClass }, rank + "."),
+      el("span", { class: "player-name" }, (p.name || "Anonymous") + (isYou ? " (you)" : "")),
+      el("span", { class: "player-score" }, String(p.totalScore || 0))
     );
-    if (p.id === state.playerId) line.append(" (you)");
-    ol.append(line);
+    wrap.append(row);
   });
-  wrap.append(ol);
 }
+
+/* ---------- Kickoff ---------- */
 
 boot().catch((e) => {
   console.error(e);
-  $("#screen").innerHTML =
-    "<div class='card'><h2>Trouble loading trivia.</h2><p>Try refreshing this page.</p></div>";
+  const screen = $("#screen");
+  if (screen) {
+    screen.innerHTML = "<div class='jukebox-card center'><h2>Uh oh, the jukebox skipped a beat.</h2><p>Try refreshing this page.</p></div>";
+  }
 });
