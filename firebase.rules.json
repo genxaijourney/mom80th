@@ -1,0 +1,62 @@
+{
+  "rules": {
+    ".read":  "auth != null",
+    ".write": "auth != null",
+
+    "questions": {
+      ".read":  "auth != null",
+      ".write": "auth != null",
+      "$qid": {
+        ".validate": "newData.hasChildren(['order','section','text'])",
+        "order":        { ".validate": "newData.isNumber()" },
+        "section":      { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "text":         { ".validate": "newData.isString() && newData.val().length <= 400" },
+        "hint":         { ".validate": "newData.isString() || newData.val() == null" },
+        "answer":       { ".validate": "newData.isString() || newData.val() == null" },
+        "answeredAt":   { ".validate": "newData.isNumber() || newData.val() == null" },
+        "reviewedAt":   { ".validate": "newData.isNumber() || newData.val() == null" },
+        "skipped":      { ".validate": "newData.isBoolean() || newData.val() == null" },
+        "draft":        { ".validate": "newData.isBoolean() || newData.val() == null" },
+        "photoUrl":     { ".validate": "newData.isString() || newData.val() == null" },
+        "choices":      { ".validate": "newData.hasChildren() || newData.val() == null" },
+        "correctIndex": { ".validate": "newData.isNumber() || newData.val() == null" },
+        "$other":       { ".validate": false }
+      }
+    },
+
+    "players": {
+      ".read":  "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['name'])",
+        "name":       { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "totalScore": { ".validate": "newData.isNumber() || newData.val() == null" },
+        "createdAt":  { ".validate": "newData.isNumber() || newData.val() == null" },
+        "lastSeen":   { ".validate": "newData.isNumber() || newData.val() == null" },
+        "$other":     { ".validate": false }
+      }
+    },
+
+    "scores": {
+      ".read":  "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        "$qid": {
+          ".validate": "newData.hasChildren(['chosenIndex','correct'])",
+          "chosenIndex": { ".validate": "newData.isNumber()" },
+          "correct":     { ".validate": "newData.isBoolean()" },
+          "answeredAt":  { ".validate": "newData.isNumber() || newData.val() == null" },
+          "$other":      { ".validate": false }
+        }
+      }
+    },
+
+    "config": {
+      ".read":  "auth != null",
+      ".write": "auth != null",
+      "live":            { ".validate": "newData.isBoolean() || newData.val() == null" },
+      "totalQuestions":  { ".validate": "newData.isNumber() || newData.val() == null" },
+      "sectionsOrder":   { ".validate": "newData.hasChildren() || newData.val() == null" }
+    }
+  }
+}
