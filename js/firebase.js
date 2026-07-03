@@ -30,7 +30,7 @@ import {
 // >>> REPLACE THESE PLACEHOLDERS <<<
 // ============================================================
 const firebaseConfig = {
-  apiKey:            "AIzaSyBIcXicy4CLnoTXLuPOoGoJnTbOqUjkwmA",
+  apiKey:            "AIzaSyBIcXicy4CLnoTXluPOoGoJnTbOqUjkwmA",
   authDomain:        "mom80th-3bce5.firebaseapp.com",
   databaseURL:       "https://mom80th-3bce5-default-rtdb.firebaseio.com",
   projectId:         "mom80th-3bce5",
