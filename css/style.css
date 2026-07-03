@@ -371,3 +371,625 @@ textarea.answer:focus { outline: none; border-color: var(--gold); }
 /* Utility */
 .spacer { height: 12px; }
 .big-spacer { height: 24px; }
+
+/* ============================================================
+   1950s DINER / JUKEBOX THEME (family trivia only)
+   Scoped under body.family-1950 so /mom and /admin are untouched.
+   ============================================================ */
+body.family-1950 {
+  --cream50:        #FFF3D6;
+  --cream50-deep:   #F5DEB0;
+  --diner-red:      #D42F2F;
+  --diner-red-deep: #A81E1E;
+  --aqua:           #2FBFB6;
+  --aqua-deep:      #1E8E86;
+  --mustard:        #E6B422;
+  --chrome:         #E4E7EC;
+  --chrome-dark:    #8B929B;
+  --navy:           #1F2C4C;
+  --hot-pink:       #FF6BCB;
+  --white-warm:     #FFFDF7;
+
+  background:
+    radial-gradient(ellipse at top, #FFF3D6 0%, #F5DEB0 55%, #E6C494 100%);
+  min-height: 100vh;
+  font-family: "Special Elite", "Courier New", monospace;
+  color: var(--navy);
+  overflow-x: hidden;
+}
+
+/* Atomic drifting starburst backdrop */
+.family-1950 .starburst-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 12% 20%, rgba(212, 47, 47, 0.08) 0, transparent 60px),
+    radial-gradient(circle at 87% 30%, rgba(47, 191, 182, 0.08) 0, transparent 70px),
+    radial-gradient(circle at 30% 80%, rgba(230, 180, 34, 0.08) 0, transparent 60px),
+    radial-gradient(circle at 75% 75%, rgba(255, 107, 203, 0.06) 0, transparent 55px);
+  background-size: 220px 220px, 270px 270px, 240px 240px, 250px 250px;
+  animation: driftBg 80s linear infinite;
+}
+@keyframes driftBg {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: 440px 440px, -540px 540px, 480px -480px, -560px -320px; }
+}
+
+/* Fireworks canvas sits above the backdrop, below the content */
+#fireworks-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.family-1950 .family-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 14px 40px;
+}
+
+/* ---------- Marquee (top banner) ---------- */
+.family-1950 .marquee {
+  background: linear-gradient(180deg, var(--diner-red) 0%, var(--diner-red-deep) 100%);
+  border-radius: 18px;
+  padding: 12px 12px 18px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+    0 12px 30px rgba(168, 30, 30, 0.45);
+  text-align: center;
+  color: var(--cream50);
+  margin-bottom: 22px;
+  border: 4px solid var(--chrome);
+}
+.family-1950 .marquee-title {
+  font-family: "Alfa Slab One", serif;
+  font-size: clamp(38px, 8vw, 68px);
+  color: var(--cream50);
+  margin: 4px 0 2px;
+  text-shadow:
+    0 2px 0 var(--mustard),
+    0 4px 0 rgba(0, 0, 0, 0.28),
+    2px 6px 10px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.family-1950 .marquee-sub {
+  font-family: "Righteous", sans-serif;
+  color: var(--mustard);
+  font-size: clamp(12px, 2.6vw, 18px);
+  letter-spacing: 3px;
+  margin: 2px 0 6px;
+}
+.family-1950 .marquee-lights {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 4px 0;
+}
+.family-1950 .marquee-lights span {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--mustard);
+  box-shadow: 0 0 8px var(--mustard), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  animation: bulb 1.3s ease-in-out infinite;
+}
+.family-1950 .marquee-lights span:nth-child(2n) { animation-delay: 0.2s; background: var(--aqua); box-shadow: 0 0 8px var(--aqua); }
+.family-1950 .marquee-lights span:nth-child(3n) { animation-delay: 0.4s; background: var(--cream50); box-shadow: 0 0 8px var(--cream50); }
+.family-1950 .marquee-lights span:nth-child(5n) { animation-delay: 0.6s; background: var(--hot-pink); box-shadow: 0 0 8px var(--hot-pink); }
+@keyframes bulb {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* ---------- Layout ---------- */
+.family-1950 .family-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 920px) {
+  .family-1950 .family-layout {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: flex-start;
+  }
+}
+
+/* ---------- Jukebox card (the question) ---------- */
+.family-1950 .jukebox-card {
+  background: var(--cream50);
+  border: 4px solid var(--chrome);
+  border-radius: 26px;
+  padding: 22px 22px 26px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.06),
+    0 14px 34px rgba(31, 44, 76, 0.2);
+  position: relative;
+}
+.family-1950 .jukebox-card::before,
+.family-1950 .jukebox-card::after {
+  content: "";
+  position: absolute;
+  top: -8px; bottom: -8px;
+  width: 12px;
+  background: linear-gradient(180deg, var(--diner-red), var(--diner-red-deep));
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.family-1950 .jukebox-card::before { left: -16px; }
+.family-1950 .jukebox-card::after  { right: -16px; }
+
+.family-1950 .q-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.family-1950 .retro-tag {
+  background: var(--navy);
+  color: var(--cream50);
+  border: 2px solid var(--mustard);
+  padding: 6px 12px;
+  font-family: "Righteous", sans-serif;
+  letter-spacing: 2px;
+  font-size: 14px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.family-1950 .q-counter {
+  font-family: "Alfa Slab One", serif;
+  color: var(--diner-red-deep);
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+/* Progress bar */
+.family-1950 .retro-progress {
+  height: 16px;
+  border-radius: 20px;
+  background: var(--navy);
+  padding: 3px;
+  border: 2px solid var(--chrome-dark);
+  overflow: hidden;
+  margin: 4px 0 14px;
+}
+.family-1950 .retro-progress > div {
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--mustard), var(--diner-red), var(--aqua));
+  transition: width 0.4s ease;
+}
+
+/* ---------- Polaroid photo of Sharon ---------- */
+.family-1950 .polaroid {
+  background: #fff;
+  padding: 12px 12px 28px;
+  border-radius: 4px;
+  margin: 8px auto 22px;
+  max-width: 320px;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.28),
+    0 2px 5px rgba(0, 0, 0, 0.16);
+  transform: rotate(-1.7deg);
+  position: relative;
+}
+.family-1950 .polaroid::before {
+  content: "";
+  position: absolute;
+  top: -8px; left: 50%; transform: translateX(-50%);
+  width: 64px; height: 14px;
+  background: rgba(230, 180, 34, 0.75);
+  border-radius: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.family-1950 .polaroid .photo-inner {
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, #E4C7A0, #D4A76A 60%, #B8895C);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--navy);
+  font-family: "Special Elite", monospace;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+.family-1950 .polaroid .photo-inner img { width: 100%; height: 100%; object-fit: cover; }
+.family-1950 .polaroid .photo-placeholder-inner {
+  font-size: 60px;
+  color: rgba(31, 44, 76, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.family-1950 .photo-placeholder-sub {
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.family-1950 .polaroid .caption {
+  text-align: center;
+  color: var(--diner-red-deep);
+  font-family: "Special Elite", monospace;
+  font-size: 15px;
+  margin-top: 10px;
+  letter-spacing: 2px;
+}
+
+/* ---------- Question text ---------- */
+.family-1950 .q-text {
+  font-family: "Alfa Slab One", serif;
+  color: var(--navy);
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1.25;
+  text-align: center;
+  margin: 6px 0 18px;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Choice buttons ---------- */
+.family-1950 .choices-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+@media (min-width: 500px) {
+  .family-1950 .choices-grid { grid-template-columns: 1fr 1fr; }
+}
+.family-1950 .retro-choice {
+  background: linear-gradient(180deg, var(--white-warm) 0%, var(--chrome) 100%);
+  border: 3px solid var(--navy);
+  color: var(--navy);
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-family: "Righteous", sans-serif;
+  font-size: 17px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.15),
+    0 6px 14px rgba(31, 44, 76, 0.22);
+  transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease;
+  position: relative;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.family-1950 .retro-choice:hover:not(:disabled) {
+  border-color: var(--diner-red);
+  color: var(--diner-red-deep);
+}
+.family-1950 .retro-choice:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+    0 2px 6px rgba(31, 44, 76, 0.15);
+}
+.family-1950 .retro-choice::before {
+  content: attr(data-letter);
+  font-family: "Alfa Slab One", serif;
+  font-size: 20px;
+  color: var(--diner-red);
+  background: var(--mustard);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid var(--navy);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+.family-1950 .retro-choice.correct {
+  background: linear-gradient(180deg, #B7EAA5, #6FBC55);
+  border-color: #2E5C24;
+  color: #1E4218;
+}
+.family-1950 .retro-choice.correct::before {
+  background: var(--white-warm);
+  color: #2E5C24;
+}
+.family-1950 .retro-choice.wrong {
+  background: linear-gradient(180deg, #F7B4B4, #E56060);
+  border-color: var(--diner-red-deep);
+  color: #6B1414;
+}
+.family-1950 .retro-choice:disabled { cursor: default; }
+
+/* ---------- Feedback badge ---------- */
+.family-1950 .feedback-badge {
+  margin-top: 16px;
+  text-align: center;
+  font-family: "Alfa Slab One", serif;
+  font-size: 22px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 3px dashed;
+  animation: badgePop 0.4s ease;
+}
+@keyframes badgePop {
+  0%   { transform: scale(0.9); opacity: 0; }
+  60%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.family-1950 .feedback-correct {
+  background: rgba(47, 191, 182, 0.14);
+  color: var(--aqua-deep);
+  border-color: var(--aqua-deep);
+}
+.family-1950 .feedback-wrong {
+  background: rgba(212, 47, 47, 0.14);
+  color: var(--diner-red-deep);
+  border-color: var(--diner-red-deep);
+}
+.family-1950 .feedback-badge .tier-name {
+  display: block;
+  font-family: "Righteous", sans-serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  margin-top: 6px;
+}
+
+/* ---------- Retro action buttons ---------- */
+.family-1950 .retro-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.family-1950 .retro-btn {
+  font-family: "Righteous", sans-serif;
+  font-size: 18px;
+  padding: 14px 22px;
+  border: 3px solid var(--navy);
+  border-radius: 14px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    0 6px 12px rgba(31, 44, 76, 0.18);
+  transition: transform 0.1s ease;
+}
+.family-1950 .retro-btn-primary {
+  background: linear-gradient(180deg, var(--diner-red), var(--diner-red-deep));
+  color: var(--cream50);
+}
+.family-1950 .retro-btn-secondary {
+  background: linear-gradient(180deg, var(--aqua), var(--aqua-deep));
+  color: var(--cream50);
+}
+.family-1950 .retro-btn-ghost {
+  background: var(--cream50);
+  color: var(--navy);
+}
+.family-1950 .retro-btn:active { transform: translateY(1px); }
+
+/* ---------- Name prompt card ---------- */
+.family-1950 .name-card {
+  background: var(--cream50);
+  border: 4px solid var(--diner-red);
+  border-radius: 26px;
+  padding: 30px 24px;
+  text-align: center;
+  max-width: 540px;
+  margin: 0 auto;
+  box-shadow: 0 14px 34px rgba(31, 44, 76, 0.2);
+}
+.family-1950 .name-card h1 {
+  font-family: "Alfa Slab One", serif;
+  color: var(--diner-red-deep);
+  font-size: 32px;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 0 var(--mustard);
+}
+.family-1950 .name-card p {
+  font-family: "Special Elite", monospace;
+  color: var(--navy);
+  font-size: 16px;
+}
+.family-1950 .name-card input {
+  width: 100%;
+  padding: 14px;
+  font-family: "Special Elite", monospace;
+  font-size: 20px;
+  border: 3px solid var(--navy);
+  border-radius: 12px;
+  background: #fff;
+  margin: 6px 0 14px;
+  color: var(--navy);
+}
+.family-1950 .name-card input:focus { outline: none; border-color: var(--diner-red); }
+
+/* ---------- Completion / finale card ---------- */
+.family-1950 .finale-card {
+  text-align: center;
+  padding: 40px 24px;
+}
+.family-1950 .finale-title {
+  font-family: "Alfa Slab One", serif;
+  font-size: clamp(30px, 6vw, 46px);
+  color: var(--diner-red-deep);
+  text-shadow: 0 3px 0 var(--mustard), 0 6px 0 rgba(0, 0, 0, 0.15);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.family-1950 .finale-sub {
+  font-family: "Righteous", sans-serif;
+  font-size: 22px;
+  color: var(--navy);
+  letter-spacing: 2px;
+}
+
+/* ---------- Scoreboard (live leaderboard) ---------- */
+.family-1950 .scoreboard {
+  background: var(--navy);
+  border-radius: 22px;
+  padding: 18px 16px 20px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.4),
+    0 14px 30px rgba(31, 44, 76, 0.35);
+  border: 4px solid var(--chrome);
+  color: var(--cream50);
+  position: relative;
+  overflow: hidden;
+}
+.family-1950 .scoreboard::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 6px;
+  background: repeating-linear-gradient(90deg,
+    var(--diner-red) 0 20px, var(--cream50) 20px 40px,
+    var(--aqua) 40px 60px, var(--cream50) 60px 80px);
+}
+.family-1950 .scoreboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.family-1950 .scoreboard-header h3 {
+  font-family: "Alfa Slab One", serif;
+  color: var(--mustard);
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+.family-1950 .star-badge {
+  font-size: 22px;
+  color: var(--mustard);
+  filter: drop-shadow(0 0 4px var(--mustard));
+}
+.family-1950 .scoreboard-list {
+  min-height: 150px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.family-1950 .scoreboard-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  border-left: 4px solid transparent;
+  animation: rowFadeIn 0.35s ease;
+}
+.family-1950 .scoreboard-row.you {
+  background: rgba(230, 180, 34, 0.22);
+  border-left-color: var(--mustard);
+}
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.family-1950 .rank {
+  font-family: "Alfa Slab One", serif;
+  font-size: 18px;
+  color: var(--mustard);
+  width: 34px;
+  text-align: center;
+}
+.family-1950 .rank-1 { color: #FFD700; text-shadow: 0 0 8px #FFD700; }
+.family-1950 .rank-2 { color: #C0C0C0; text-shadow: 0 0 6px #C0C0C0; }
+.family-1950 .rank-3 { color: #CD7F32; text-shadow: 0 0 6px #CD7F32; }
+.family-1950 .player-name {
+  flex: 1;
+  font-family: "Special Elite", monospace;
+  font-size: 16px;
+  color: var(--cream50);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.family-1950 .player-score {
+  font-family: "Alfa Slab One", serif;
+  font-size: 22px;
+  color: var(--aqua);
+  min-width: 44px;
+  text-align: right;
+}
+.family-1950 .scoreboard-empty {
+  text-align: center;
+  color: var(--chrome);
+  font-family: "Special Elite", monospace;
+  padding: 40px 10px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Firework legend at bottom of scoreboard */
+.family-1950 .score-legend {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--chrome-dark);
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  color: var(--cream50);
+}
+.family-1950 .legend-title {
+  font-family: "Righteous", sans-serif;
+  color: var(--mustard);
+  letter-spacing: 2px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.family-1950 .score-legend > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.family-1950 .tier {
+  width: 14px; height: 14px; border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 6px currentColor;
+}
+.family-1950 .tier-firecracker { background: radial-gradient(#FFDD5C, #E6B422); color: #E6B422; }
+.family-1950 .tier-candle      { background: radial-gradient(#FF9E4E, #D42F2F); color: #D42F2F; }
+.family-1950 .tier-burst       { background: radial-gradient(#FF6BCB, #A81E80); color: #FF6BCB; }
+.family-1950 .tier-shell       { background: radial-gradient(#6BE0FF, #1E7EA8); color: #6BE0FF; }
+.family-1950 .tier-chrys       { background: radial-gradient(#6DFF9E, #1EA84E); color: #6DFF9E; }
+.family-1950 .tier-peony       { background: radial-gradient(#B389FF, #6D28D9); color: #B389FF; }
+.family-1950 .tier-palm        { background: radial-gradient(#FFB84A, #B45309); color: #FFB84A; }
+.family-1950 .tier-finale      { background: linear-gradient(45deg, #FFD700, #FF6BCB, #6BE0FF, #FFD700); color: #FFD700; }
+
+/* ---------- Footer ---------- */
+.family-1950 .family-footer,
+.family-1950 .footer {
+  font-family: "Special Elite", monospace;
+  color: var(--diner-red-deep);
+  text-align: center;
+  padding: 22px 20px 40px;
+  font-size: 14px;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 10;
+}
+
+/* Small screens: stack scoreboard below the card */
+@media (max-width: 919px) {
+  .family-1950 .family-layout { display: block; }
+  .family-1950 .scoreboard { margin-top: 22px; }
+  .family-1950 .polaroid { max-width: 260px; }
+}
