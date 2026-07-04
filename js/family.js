@@ -17,6 +17,7 @@ import * as sfx from "./sfx.js";
 
 const NAME_KEY  = "sharon80.playerName";
 const INDEX_KEY = "sharon80.familyIndex";
+const MUTE_KEY  = "sharon80.muted";
 
 const CHOICE_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -46,6 +47,11 @@ async function boot() {
   };
   document.addEventListener("click", unlockAudio, { once: false });
   document.addEventListener("touchstart", unlockAudio, { once: false });
+
+  // Restore saved mute preference + mount the toggle button
+  const savedMuted = localStorage.getItem(MUTE_KEY) === "yes";
+  sfx.setEnabled(!savedMuted);
+  mountMuteButton();
 
   state.user = await ensureSignedIn();
   state.playerId = state.user.uid;
@@ -85,6 +91,38 @@ async function boot() {
 }
 
 /* ---------- Screens ---------- */
+
+/* ---------- Sound toggle button (floating, top-right) ---------- */
+
+function mountMuteButton() {
+  if (document.getElementById("sfx-toggle")) return;
+  const btn = document.createElement("button");
+  btn.id = "sfx-toggle";
+  btn.className = "sfx-toggle";
+  btn.type = "button";
+  updateMuteButton(btn);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const nowMuted = sfx.getEnabled();
+    sfx.setEnabled(!nowMuted);
+    localStorage.setItem(MUTE_KEY, nowMuted ? "yes" : "no");
+    updateMuteButton(btn);
+    // Little confirm blip on unmute so the user hears something worked
+    if (!nowMuted) { /* was muted, now enabled — no sound needed */ }
+    else { /* was enabled, now muted — silence */ }
+  });
+  document.body.appendChild(btn);
+}
+
+function updateMuteButton(btn) {
+  const on = sfx.getEnabled();
+  btn.setAttribute("aria-label", on ? "Sound is ON — tap to mute" : "Sound is OFF — tap to unmute");
+  btn.setAttribute("aria-pressed", on ? "false" : "true");
+  btn.classList.toggle("sfx-off", !on);
+  btn.innerHTML = on
+    ? '<span class="sfx-icon">🔊</span><span class="sfx-label">SOUND ON</span>'
+    : '<span class="sfx-icon">🔇</span><span class="sfx-label">SOUND OFF</span>';
+}
 
 function renderNotLive() {
   const screen = $("#screen");
