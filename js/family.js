@@ -13,6 +13,7 @@ import {
 import { loadQuestions } from "./questions.js";
 import { $, el, clear } from "./ui.js";
 import * as fireworks from "./fireworks.js";
+import * as sfx from "./sfx.js";
 
 const NAME_KEY  = "sharon80.playerName";
 const INDEX_KEY = "sharon80.familyIndex";
@@ -36,6 +37,15 @@ async function boot() {
   // Set up the fireworks canvas as soon as we can
   const canvasEl = document.getElementById("fireworks-canvas");
   if (canvasEl) fireworks.init(canvasEl);
+
+  // Unlock Web Audio on the first user gesture (required on iOS / Safari)
+  const unlockAudio = () => {
+    sfx.unlock();
+    document.removeEventListener("click", unlockAudio);
+    document.removeEventListener("touchstart", unlockAudio);
+  };
+  document.addEventListener("click", unlockAudio, { once: false });
+  document.addEventListener("touchstart", unlockAudio, { once: false });
 
   state.user = await ensureSignedIn();
   state.playerId = state.user.uid;
@@ -284,8 +294,11 @@ async function pick(q, chosenIndex, choicesWrap, card) {
 
   if (correct) {
     const tier = fireworks.celebrate(newScore);
+    sfx.playCorrect();
     // Announce tier for accessibility
     badge.setAttribute("aria-label", `Correct. ${tier.name} celebration unlocked.`);
+  } else {
+    sfx.playWrong();
   }
 
   // Add / update Next button
