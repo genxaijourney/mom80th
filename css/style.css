@@ -745,6 +745,29 @@ body.family-1950 {
   margin-top: 6px;
 }
 
+/* Milestone badge — a much punchier version fires every 10 correct */
+.family-1950 .feedback-milestone {
+  background: linear-gradient(90deg,
+    rgba(230, 180, 34, 0.25),
+    rgba(212, 47, 47, 0.25),
+    rgba(47, 191, 182, 0.25),
+    rgba(230, 180, 34, 0.25));
+  background-size: 300% 100%;
+  color: var(--diner-red-deep);
+  border-color: var(--mustard);
+  animation: milestonePulse 1.2s ease infinite, milestoneSlide 3s linear infinite;
+  font-size: 26px;
+  text-shadow: 0 2px 0 var(--mustard);
+}
+@keyframes milestonePulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+@keyframes milestoneSlide {
+  from { background-position: 0% 50%; }
+  to   { background-position: 300% 50%; }
+}
+
 /* ---------- Retro action buttons ---------- */
 .family-1950 .retro-actions {
   display: flex;
