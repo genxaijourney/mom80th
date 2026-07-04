@@ -1016,3 +1016,62 @@ body.family-1950 {
   .family-1950 .scoreboard { margin-top: 22px; }
   .family-1950 .polaroid { max-width: 260px; }
 }
+
+/* ---------- Sound toggle button (floating, top-right) ---------- */
+.family-1950 .sfx-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: "Righteous", sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--navy);
+  background: linear-gradient(180deg, var(--white-warm), var(--chrome));
+  border: 3px solid var(--navy);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.15),
+    0 6px 14px rgba(31, 44, 76, 0.28);
+  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.family-1950 .sfx-toggle:hover {
+  color: var(--diner-red-deep);
+}
+.family-1950 .sfx-toggle:active {
+  transform: translateY(1px);
+}
+.family-1950 .sfx-toggle .sfx-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.family-1950 .sfx-toggle .sfx-label {
+  line-height: 1;
+}
+
+/* Muted state — red diner style with strike-through vibe */
+.family-1950 .sfx-toggle.sfx-off {
+  background: linear-gradient(180deg, var(--diner-red), var(--diner-red-deep));
+  color: var(--cream50);
+  border-color: var(--diner-red-deep);
+}
+
+/* Mobile: shrink to icon-only pill so it doesn't crowd the marquee */
+@media (max-width: 560px) {
+  .family-1950 .sfx-toggle {
+    top: 10px;
+    right: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .family-1950 .sfx-toggle .sfx-label {
+    display: none;
+  }
+}
