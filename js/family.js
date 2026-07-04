@@ -253,10 +253,18 @@ function renderNoQuestions() {
 
 function renderFeedbackBadge(correct, score) {
   if (correct) {
-    const tier = fireworks.tierFor(Math.max(1, score));
+    // On every 10th correct answer, announce the milestone and firework tier.
+    if (score > 0 && score % 10 === 0) {
+      const milestone = score / 10;
+      const tier = fireworks.tierFor(score);
+      return el("div", { class: "feedback-badge feedback-correct feedback-milestone" },
+        `🎇 MILESTONE ${score}! 🎇`,
+        el("span", { class: "tier-name" }, tier.name + " · Firework #" + milestone + " of 20")
+      );
+    }
     return el("div", { class: "feedback-badge feedback-correct" },
       "✨ Correct!",
-      el("span", { class: "tier-name" }, tier.name + " unlocked")
+      el("span", { class: "tier-name" }, "Keep going — firework at " + (Math.floor(score / 10) * 10 + 10))
     );
   }
   return el("div", { class: "feedback-badge feedback-wrong" },
@@ -293,10 +301,13 @@ async function pick(q, chosenIndex, choicesWrap, card) {
   card.insertBefore(badge, card.querySelector(".retro-actions") || null);
 
   if (correct) {
-    const tier = fireworks.celebrate(newScore);
     sfx.playCorrect();
-    // Announce tier for accessibility
-    badge.setAttribute("aria-label", `Correct. ${tier.name} celebration unlocked.`);
+    // Fireworks only fire on every 10th correct answer, escalating.
+    if (newScore > 0 && newScore % 10 === 0) {
+      const milestone = newScore / 10;
+      const tier = fireworks.celebrateMilestone(milestone);
+      badge.setAttribute("aria-label", `Correct. Milestone ${newScore}. ${tier.name} celebration.`);
+    }
   } else {
     sfx.playWrong();
   }

@@ -57,11 +57,48 @@ export function tierFor(score) {
   return TIERS.find(t => score >= t.min && score <= t.max) || TIERS[0];
 }
 
-export function celebrate(score) {
+export function celebrate(score, scale = 1) {
   if (!canvas) return null;
   const tier = tierFor(score);
-  tier.fn(score);
+  tier.fn(score, scale);
   return tier;
+}
+
+/* Milestone-based celebration (every 10 correct answers).
+ * milestone is 1..20 — each successive milestone maps to a bigger tier
+ * AND applies an escalating scale multiplier so #20 dwarfs #1.
+ * Public API: fireworks.celebrateMilestone(1..20).
+ */
+const MILESTONE_MAP = [
+  { tierIndex: 0, scale: 1.0  }, // M1 (score 10)  — firecracker
+  { tierIndex: 1, scale: 1.0  }, // M2 (20)        — roman candle
+  { tierIndex: 2, scale: 1.0  }, // M3 (30)        — aerial burst
+  { tierIndex: 3, scale: 1.0  }, // M4 (40)        — big shell
+  { tierIndex: 3, scale: 1.4  }, // M5 (50)        — big shell +
+  { tierIndex: 4, scale: 1.0  }, // M6 (60)        — chrysanthemum
+  { tierIndex: 4, scale: 1.35 }, // M7 (70)        — chrysanthemum +
+  { tierIndex: 5, scale: 1.0  }, // M8 (80)        — peony + willow
+  { tierIndex: 5, scale: 1.3  }, // M9 (90)        — peony + willow +
+  { tierIndex: 5, scale: 1.6  }, // M10 (100)      — peony + willow ++
+  { tierIndex: 6, scale: 1.0  }, // M11 (110)      — palm finale
+  { tierIndex: 6, scale: 1.2  }, // M12 (120)      — palm finale +
+  { tierIndex: 6, scale: 1.4  }, // M13 (130)      — palm finale ++
+  { tierIndex: 6, scale: 1.65 }, // M14 (140)      — palm finale +++
+  { tierIndex: 7, scale: 0.45 }, // M15 (150)      — grand finale (small)
+  { tierIndex: 7, scale: 0.65 }, // M16 (160)      — grand finale +
+  { tierIndex: 7, scale: 0.85 }, // M17 (170)      — grand finale ++
+  { tierIndex: 7, scale: 1.05 }, // M18 (180)      — grand finale +++
+  { tierIndex: 7, scale: 1.3  }, // M19 (190)      — grand finale ++++
+  { tierIndex: 7, scale: 1.6  }  // M20 (200)      — GRAND FINALE MAX
+];
+
+export function celebrateMilestone(milestone) {
+  if (!canvas) return null;
+  const idx = Math.max(0, Math.min(19, milestone - 1));
+  const map = MILESTONE_MAP[idx];
+  const tier = TIERS[map.tierIndex];
+  tier.fn(milestone * 10, map.scale);
+  return { ...tier, milestone, scale: map.scale };
 }
 
 /* ---------- Particle helpers ---------- */
@@ -92,19 +129,21 @@ function randColor(palette) {
 
 /* ---------- Tier implementations ---------- */
 
-function fireFirecracker(score) {
+const sc = (v, scale) => Math.max(1, Math.round(v * scale));
+
+function fireFirecracker(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const pops = 3;
+  const pops = sc(3, scale);
   for (let i = 0; i < pops; i++) {
     setTimeout(() => {
       const x = 60 + Math.random() * (w - 120);
       const y = h - 60 - Math.random() * 80;
       addBurst({
         x, y,
-        count: 24,
+        count: sc(24, scale),
         color: () => randColor(FLAG_PALETTE),
-        speed: 2.6,
+        speed: 2.6 * (0.9 + 0.1 * scale),
         life: 40,
         gravity: 0.13,
         drag: 0.93,
@@ -114,15 +153,15 @@ function fireFirecracker(score) {
   }
 }
 
-function fireRomanCandle(score) {
+function fireRomanCandle(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const shots = 6 + Math.min(6, Math.floor((score - 10) / 2));
+  const shots = sc(6 + Math.min(6, Math.floor((score - 10) / 2)), scale);
   for (let i = 0; i < shots; i++) {
     setTimeout(() => {
       const x = 80 + Math.random() * (w - 160);
       const color = randColor(HOT_PALETTE);
-      for (let j = 0; j < 14; j++) {
+      for (let j = 0; j < sc(14, scale); j++) {
         particles.push({
           x, y: h - 20,
           vx: (Math.random() - 0.5) * 0.9,
@@ -136,107 +175,109 @@ function fireRomanCandle(score) {
   }
 }
 
-function fireAerialBurst(score) {
+function fireAerialBurst(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
   launchShell({
     x: 80 + Math.random() * (w - 160),
     y: h,
     targetY: h * 0.45,
-    count: 70,
+    count: sc(70, scale),
     palette: FLAG_PALETTE,
-    speed: 4.5,
-    life: 65
+    speed: 4.5 * (0.9 + 0.1 * scale),
+    life: sc(65, scale)
   });
 }
 
-function fireBigShell(score) {
+function fireBigShell(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const count = 2 + Math.floor((score - 30) / 10);
+  const count = sc(2 + Math.floor((score - 30) / 10), scale);
   for (let i = 0; i < count; i++) {
     setTimeout(() => {
       launchShell({
         x: 80 + Math.random() * (w - 160),
         y: h,
         targetY: h * (0.25 + Math.random() * 0.22),
-        count: 110,
+        count: sc(110, scale),
         palette: FLAG_PALETTE,
-        speed: 6.2,
-        life: 85
+        speed: 6.2 * (0.9 + 0.1 * scale),
+        life: sc(85, scale)
       });
     }, i * 320);
   }
 }
 
-function fireChrysanthemum(score) {
+function fireChrysanthemum(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  for (let i = 0; i < 3; i++) {
+  const shots = sc(3, scale);
+  for (let i = 0; i < shots; i++) {
     setTimeout(() => {
       launchShell({
         x: 100 + Math.random() * (w - 200),
         y: h,
         targetY: h * (0.2 + Math.random() * 0.2),
-        count: 150,
+        count: sc(150, scale),
         palette: ALL_PALETTE,
-        speed: 7,
-        life: 95,
+        speed: 7 * (0.9 + 0.1 * scale),
+        life: sc(95, scale),
         trail: true
       });
     }, i * 260);
   }
 }
 
-function firePeonyWillow(score) {
+function firePeonyWillow(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
   launchShell({
     x: w * 0.3, y: h, targetY: h * 0.24,
-    count: 190, palette: HOT_PALETTE,
-    speed: 8, life: 105, trail: true
+    count: sc(190, scale), palette: HOT_PALETTE,
+    speed: 8 * (0.9 + 0.1 * scale), life: sc(105, scale), trail: true
   });
   setTimeout(() => launchShell({
     x: w * 0.7, y: h, targetY: h * 0.3,
-    count: 130, palette: COOL_PALETTE,
-    speed: 6, life: 135,
+    count: sc(130, scale), palette: COOL_PALETTE,
+    speed: 6 * (0.9 + 0.1 * scale), life: sc(135, scale),
     gravity: 0.1, trail: true
   }), 400);
 }
 
-function firePalmFinale(score) {
+function firePalmFinale(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  for (let i = 0; i < 5; i++) {
+  const shots = sc(5, scale);
+  for (let i = 0; i < shots; i++) {
     setTimeout(() => {
       launchShell({
-        x: (i + 0.5) * (w / 5),
+        x: (i + 0.5) * (w / Math.max(1, shots)),
         y: h,
         targetY: h * (0.2 + Math.random() * 0.15),
-        count: 110 + Math.floor(Math.random() * 70),
+        count: sc(110 + Math.floor(Math.random() * 70), scale),
         palette: ALL_PALETTE,
-        speed: 7 + Math.random() * 2.2,
-        life: 95 + Math.random() * 40,
+        speed: (7 + Math.random() * 2.2) * (0.9 + 0.1 * scale),
+        life: sc(95 + Math.random() * 40, scale),
         trail: true
       });
     }, i * 220);
   }
 }
 
-function fireGrandFinale(score) {
+function fireGrandFinale(score, scale = 1) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const shots = 14;
+  const shots = sc(14, scale);
   for (let i = 0; i < shots; i++) {
     setTimeout(() => {
       launchShell({
         x: 60 + Math.random() * (w - 120),
         y: h,
         targetY: h * (0.13 + Math.random() * 0.32),
-        count: 160 + Math.floor(Math.random() * 100),
+        count: sc(160 + Math.floor(Math.random() * 100), scale),
         palette: ALL_PALETTE,
-        speed: 8 + Math.random() * 2.5,
-        life: 100 + Math.random() * 60,
+        speed: (8 + Math.random() * 2.5) * (0.9 + 0.1 * scale),
+        life: sc(100 + Math.random() * 60, scale),
         trail: true
       });
     }, i * 180);
